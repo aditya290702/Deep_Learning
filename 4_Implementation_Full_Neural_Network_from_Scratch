@@ -1,1 +1,76 @@
+import numpy as np
+import matplotlib.pyplot as plt
 
+
+np.random.seed(42)
+X = np.random.rand(100, 2)  # 100 samples, 2 features
+y = np.where(X[:, 0] + X[:, 1] > 1, 1, 0).reshape(-1, 1)  # Binary labels
+
+# Initialize parameters
+input_size = 2  # Number of features
+output_size = 1  # Binary output
+learning_rate = 0.01
+iterations = 1000
+
+# Weight initialization
+W = np.random.randn(input_size, output_size)
+b = np.zeros((1, output_size))
+
+# Activation Function Sigmoid
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+
+# Derivative of Sigmoid
+def sigmoid_derivative(z):
+    return sigmoid(z) * (1 - sigmoid(z))
+
+
+# Loss function (Binary Cross-Entropy)
+def binary_cross_entropy(y_true, y_pred):
+    epsilon = 1e-10
+    return -np.mean(y_true * np.log(y_pred + epsilon) + (1 - y_true) * np.log(1 - y_pred + epsilon))
+
+
+# Forward Pass
+def forward(X, W, b):
+    z = np.dot(X, W) + b
+    a = sigmoid(z)
+    return a
+
+
+# Backward Pass
+def backward(X, y, a):
+    m = X.shape[0]
+    dz = a - y  # Gradient of the loss w.r.t. the output layer
+    dW = np.dot(X.T, dz) / m  # Gradient of the loss w.r.t. W
+    db = np.sum(dz) / m  # Gradient of the loss w.r.t. b
+    return dW, db
+
+
+# Training network
+losses = []
+for i in range(iterations):
+    # Forward pass
+    a = forward(X, W, b)
+
+    # Compute loss
+    loss = binary_cross_entropy(y, a)
+    losses.append(loss)
+
+    # Backward pass
+    dW, db = backward(X, y, a)
+
+    # Update parameters
+    W -= learning_rate * dW
+    b -= learning_rate * db
+
+    if i % 100 == 0:
+        print(f"Iteration {i}, Loss: {loss}")
+
+# Plotting the loss over iterations
+plt.plot(losses)
+plt.title("Training Loss Over Iterations")
+plt.xlabel("Iteration")
+plt.ylabel("Loss")
+plt.show()
