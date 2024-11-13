@@ -1,0 +1,107 @@
+import torch
+import torch.optim as optim
+import torch.cuda
+from torchvision import datasets
+from torch.utils.data import DataLoader
+from torchvision.transforms import ToTensor,transforms
+from torch.utils.data import random_split
+import numpy as np
+from torch import nn
+
+Transforms = transforms.Compose([transforms.ToTensor()])
+
+Train_dataset = datasets.MNIST(root='./data',
+                         download=True,
+                         train=True,
+                         transform=Transforms)
+
+
+Test_dataset = datasets.MNIST(root='./data',
+                         download=True,
+                         train=False,
+                         transform=Transforms)
+
+
+Length_of_Train_dataset = len(Train_dataset)
+Length_of_Test_dataset = len(Test_dataset)
+
+
+
+Train_loaded = DataLoader(Train_dataset,batch_size=16,shuffle=True)
+Test_loaded = DataLoader(Test_dataset,batch_size=16,shuffle=False)
+
+
+#I am specifying the device for all the process to happen
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+print()
+print("----------------------------------------")
+print(f"Device being used : {device}")
+print("----------------------------------------")
+print(f"Length of the Train_Split : {len(Train_dataset)}")
+print("----------------------------------------")
+print(f"Length of the Test Dataset : {len(Test_dataset)}")
+print("----------------------------------------")
+
+Image = [Train_dataset[i][0] for i in range(0,len(Train_dataset))]
+Shape_of_Image = np.shape(Image[0])
+print(f"Shape of the Images : {Shape_of_Image}")
+print("----------------------------------------")
+No_of_unique_classes = len(np.unique(Image))
+print(f"No of unique classes : {(No_of_unique_classes)}")
+print("----------------------------------------")
+
+
+
+Model = nn.Sequential(nn.Flatten(),
+                      nn.Linear(28*28,256),
+                      nn.ReLU(),
+
+                      nn.Flatten(),
+                      nn.Linear(256, 512),
+                      nn.ReLU(),
+
+                      nn.Flatten(),
+                      nn.Linear(512, 512),
+                      nn.ReLU(),
+
+                      nn.Flatten(),
+                      nn.Linear(512, 128),
+                      nn.ReLU(),
+
+                      nn.Flatten(),
+                      nn.Linear(128, No_of_unique_classes),
+                      nn.ReLU()).to(device)
+
+for epochs in range(0,10):
+    Model.train()
+    for images,labels in Train_loaded:
+        images = images.to(device)
+        labels = labels.to(device)
+        Loss_critera = nn.CrossEntropyLoss()
+        Output = Model(images)
+        Optim = optim.SGD(Model.parameters(),lr=0.001)
+        Optim.zero_grad()
+        loss = Loss_critera(Output,labels)
+        loss.backward()
+        Optim.step()
+
+    print(f"Train Epoch : {epochs} || Loss : {loss}")
+
+Model.eval()
+for epoch in range(0,10):
+    for images, labels in Test_loaded:
+        images = images.to(device)
+        labels = labels.to(device)
+        Loss_critera = nn.CrossEntropyLoss()
+        Output = Model(images)
+        Optim = optim.SGD(Model.parameters(), lr=0.001)
+        loss = Loss_critera(Output, labels)
+        loss.backward()
+        Optim.step()
+
+    print(f"Test : Epoch : {epochs} || Loss : {loss}")
+
+
+#couldnt do accuracy measure in time
