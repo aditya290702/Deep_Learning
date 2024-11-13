@@ -1,0 +1,125 @@
+import sklearn
+from sklearn.model_selection import train_test_split
+import torch
+from torch import optim
+from torchvision import datasets,transforms
+from torch.utils.data import DataLoader,random_split
+import numpy as np
+from matplotlib import pyplot as plt
+from torch import nn
+
+Transform = transforms.Compose([transforms.Resize((32,32)),transforms.ToTensor(),transforms.Normalize((0.5,),(0.5,))])
+
+Dataset = datasets.GTSRB(root = './data/GTSRB',
+                      download=False,
+                      transform=Transform)
+
+
+length_of_dataset = len(Dataset)
+Train_len = int(0.7 * length_of_dataset)
+Test_len = length_of_dataset - Train_len
+
+Train_dataset,Test_dataset = random_split(Dataset,[Train_len,Test_len])
+
+images = [Dataset[i][0] for i in range(length_of_dataset)]
+
+# To check the shape of the first image in the dataset
+first_image_shape = images[0].shape  # This will give you the shape of the first image tensor
+
+print(f"Shape of the first Image: {first_image_shape}")
+
+print()
+print(f"Length of train : {len(Train_dataset)} length of Test : {len(Test_dataset)}")
+print("-------------------------------------------------------")
+Train_loaded = DataLoader(Train_dataset,batch_size=16)
+Test_loaded = DataLoader(Test_dataset,batch_size=16)
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"{device} is being used")
+print("-------------------------------------------------------")
+
+
+Labels = [Dataset[i][1] for i in range (0,length_of_dataset)]
+Unique_labels = np.unique(Labels)
+No_of_unique_labels = len(Unique_labels)
+print(f"The no of unique labels : {len(Unique_labels)}")
+print("-------------------------------------------------------")
+
+rows = 3
+cols = 11
+
+figure, axes = plt.subplots(rows,cols,figsize=(20,15))
+
+for i in range(1,rows*cols + 1):
+    Sample_idx = torch.randint(len(Dataset),size=(1,)).item()
+    img, labels = Dataset[Sample_idx]
+    img = img.permute(1,2,0).numpy()
+    figure.add_subplot(rows,cols,i)
+    plt.axis('off')
+    plt.imshow(img.squeeze(),cmap="grey")
+    plt.title(labels)
+plt.tight_layout()
+plt.show()
+
+model = nn.Sequential(
+    nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1),
+    nn.ReLU(),
+    nn.MaxPool2d(2, 2),  # Output: [32, H/2, W/2]
+
+    nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+    nn.ReLU(),
+    nn.MaxPool2d(2, 2),  # Output: [64, H/4, W/4]
+
+    nn.Flatten(),  # Flatten the tensor for the fully connected layers
+    nn.Linear(64 * 8 * 8, 128),  # Adjust 8*8 based on your image size after pooling
+    nn.ReLU(),
+    nn.Dropout(0.25),
+
+    nn.Linear(128, No_of_unique_labels)  # Output layer
+)
+
+loss = 0
+Loss = nn.CrossEntropyLoss()
+Optim = optim.SGD(model.parameters(),lr=0.0001)
+Loss_list = []
+Epoch_list = []
+
+for epoch in range(10):
+    model.train()
+    for images, labels in Train_loaded:
+        images, labels = images.to(device), labels.to(device)  # Move data to the device
+
+        Optim.zero_grad()  # Zero the gradients
+        output = model(images)  # Forward pass
+        loss = Loss(output, labels)  # Calculate loss
+        loss.backward()  # Backward pass
+        Optim.step()  # Update weights
+
+    print(f"Loss for Epoch {epoch}: {loss.item()}")
+
+all_preds = []
+all_labels = []
+
+
+# Disable gradient computation as it’s not needed for evaluation
+with torch.no_grad():
+    for images, labels in Test_loaded:
+        images, labels = images.to(device), labels.to(device)
+
+        # Forward pass
+        outputs = model(images)
+
+        # Get the predicted class by finding the index with the max score
+        _, preds = torch.max(outputs, 1)
+
+        # Store predictions and labels
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+# Convert lists to numpy arrays for easier evaluation
+all_preds = np.array(all_preds)
+all_labels = np.array(all_labels)
+
+# Calculate accuracy or any other metric as needed
+accuracy = np.mean(all_preds == all_labels)
+print(f"Test Accuracy: {accuracy}")
