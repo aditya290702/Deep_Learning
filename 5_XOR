@@ -1,0 +1,63 @@
+
+import numpy as np
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return sigmoid(x) * (1 - sigmoid(x))
+ 
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
+y = np.array([[0], [1], [1], [0]])
+
+# Initialize weights and biases
+input_size = 2
+hidden_size = 2
+output_size = 1
+learning_rate = 0.1
+epochs = 10000
+
+
+
+
+W1 = np.random.rand(input_size, hidden_size)  # Weights between input and hidden layer
+b1 = np.random.rand(hidden_size)  # Bias for hidden layer
+W2 = np.random.rand(hidden_size, output_size)  # Weights between hidden and output layer
+b2 = np.random.rand(output_size)  # Bias for output layer
+
+ 
+for epoch in range(epochs):
+    # Forward pass
+    # Hidden layer
+    z1 = np.dot(X, W1) + b1  # Weighted sum for hidden layer
+    a1 = sigmoid(z1)         # Activation for hidden layer
+ 
+    z2 = np.dot(a1, W2) + b2  # Weighted sum for output layer
+    a2 = sigmoid(z2)          # Activation for output layer (predicted output)
+ 
+    error = y - a2
+
+    # Backpropagation
+    
+    d_z2 = error * sigmoid_derivative(z2)
+    d_W2 = np.dot(a1.T, d_z2)
+    d_b2 = np.sum(d_z2, axis=0)
+
+    # Hidden layer gradients
+    d_a1 = np.dot(d_z2, W2.T)
+    d_z1 = d_a1 * sigmoid_derivative(z1)
+    d_W1 = np.dot(X.T, d_z1)
+    d_b1 = np.sum(d_z1, axis=0)
+
+    # Update weights and biases
+    W1 += learning_rate * d_W1
+    b1 += learning_rate * d_b1
+    W2 += learning_rate * d_W2
+    b2 += learning_rate * d_b2
+ 
+    if epoch % 1000 == 0:
+        loss = np.mean(np.abs(error))
+        print(f'Epoch {epoch}, Loss: {loss}')
+
+# Final output after training
+print("Final Predictions:")
+print(a2)
