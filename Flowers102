@@ -1,0 +1,132 @@
+import matplotlib.pyplot as plt
+import torch.optim as optim
+import torch.cuda
+import torchvision.transforms as transforms
+from torchvision import datasets
+from torch.utils.data import DataLoader
+from torchvision.transforms import ToTensor
+import scipy.io
+from torch import nn
+import numpy as np
+
+
+#Transformation
+transforms = transforms.Compose([transforms.Resize((224,224)),
+                                 transforms.ToTensor()])
+
+#Train and Test
+train_dataset = datasets.Flowers102(root='data/flowers102',
+                                    split='train',
+                                    transform=transforms,
+                                    download=True)
+
+test_dataset = datasets.Flowers102(root='data/flowers102',
+                                   split='test',
+                                   transform=transforms,
+                                   download=True)
+
+
+#Specifying the Device to be used
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("----------------------------------------------")
+print(f"{device} is being used")
+print("----------------------------------------------")
+
+
+#Printing the number of Unique labels
+labels = (np.unique(train_dataset._labels))
+num_labels = len(labels)
+print(f"Np. of Unique Classes : {num_labels}")
+
+
+# Create data loaders
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
+
+print("----------------------------------------------")
+print(f"Length of Train Data : {len(train_loader)}")
+print(f"Length of Test Data : {len(test_loader)}")
+
+
+# #Image and Labels
+# images, labels = next(iter(train_loader))
+# images , labels = images.to(device),labels.to(device)
+# image , label = train_dataset[0]
+
+
+#Building the CNN model
+model = nn.Sequential(nn.Conv2d(in_channels=3,out_channels=32,padding=1,kernel_size=3,stride=1),
+                      nn.ReLU(),
+                      nn.MaxPool2d(2,2),
+
+                      nn.Conv2d(in_channels=32, out_channels=64, padding=1, kernel_size=3, stride=1),
+                      nn.ReLU(),
+                      nn.MaxPool2d(2, 2),
+
+                      nn.Conv2d(in_channels=64, out_channels=128, padding=1, kernel_size=3, stride=1),
+                      nn.ReLU(),
+                      nn.MaxPool2d(2, 2),
+
+                      nn.Conv2d(in_channels=128, out_channels=256, padding=1, kernel_size=3, stride=1),
+                      nn.ReLU(),
+                      nn.MaxPool2d(2, 2),
+
+                      nn.Flatten(),
+                      nn.Linear(256 * 14 * 14,256),
+                      nn.ReLU(),
+                      nn.Linear(256,num_labels)
+                      )
+print("----------------------------------------------")
+print(f"Model Architecture : {model}")
+model.train()
+
+#Declaring the Loss function
+Loss_Criterion = nn.CrossEntropyLoss()
+Optimizer = optim.Adam(model.parameters(), lr = 0.1)
+
+# img_np = image.numpy()
+# img_np = img_np.transpose(1,2,0)
+# plt.imshow(img_np)
+# plt.title(f"Label : {labels}")
+# plt.axis('off')
+# plt.show()
+
+rows = 17
+cols = 6
+figure, axes = plt.subplots(rows,cols,figsize=(20,15))
+
+if(len(axes) == 1):
+    axes = axes.flatten()
+
+for i in range(1,rows*cols + 1):
+    sample_idx = torch.randint(len(train_dataset),size=(1,)).item()
+    img, label = train_dataset[sample_idx]
+    figure.add_subplot(rows,cols,i)
+    img = img.permute(1, 2, 0).numpy()
+    plt.axis("off")
+    plt.imshow(img.squeeze(),cmap="grey")
+
+# plt.tight_layout()
+plt.show()
+
+Epoch_list  = []
+Loss_list = []
+
+for epoch in range(10):
+    for images,labels in train_loader:
+        images, labels = images.to(device),labels.to(device)
+        Optimizer.zero_grad()
+        output = model(images)
+        loss = Loss_Criterion(output, labels)
+        loss.backward()
+        Optimizer.step()
+        Epoch_list.append(epoch)
+        Loss_list.append(loss.item())
+    print("--------------------------------")
+    print(f"Epoch : {epoch}, Loss : {loss}")
+
+plt.plot(Epoch_list,Loss_list)
+plt.title("Epochs vs Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.show()
