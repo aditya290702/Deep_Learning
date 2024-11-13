@@ -1,0 +1,67 @@
+# 1. (i) Generate a dataset of 1000 English sentences describing fictitious movie reviews
+# (need not be exact movie reviews). Attach a positive or negative label for each sample
+# (review) reflecting positive or negative sentiment about the movie based on the review
+# description.
+
+# (ii) Use the generated dataset and train a RNN classifier to predict the movie sentiment
+# based on movie review descriptions.
+
+import random
+import pandas as pd
+
+positive_words = ["fantastic", "exciting", "good", "better", "amazing", "enjoyable", "thrilling", "well planned", "worth it", "a masterpiece"]
+negative_words = ["boring", "unplanned", "poor-directed", "could_have_been_better", "tedious", "disappointing", "terrible", "average", "shit"]
+
+# Templates for positive and negative reviews
+positive_templates = [
+    "The movie was absolutely {}. I enjoyed every moment of it.",
+    "An {} experience that kept me engaged throughout.",
+    "A well-paced movie with {} direction and story.",
+    "The plot was {} and the acting was top-notch.",
+    "One of the most {} movies I've seen recently.",
+    "The movie exceeded my expectations and was really {}.",
+    "The storyline was {} and very touching.",
+    "A truly {} film with excellent performances."
+]
+
+negative_templates = [
+    "The movie was quite {} and not worth the time.",
+    "A very {} experience with weak performances.",
+    "It felt too {} and lacked any memorable moments.",
+    "The story was {} and hard to follow.",
+    "Unfortunately, it was a {} movie that I wouldn't recommend.",
+    "The movie was {} and didn't meet my expectations.",
+    "The pacing was too slow, making it {}.",
+    "Overall, it was a {} experience."
+]
+
+# Function to generate a single review
+def generate_review(label):
+    if label == "positive":
+        template = random.choice(positive_templates)
+        word = random.choice(positive_words)
+        review = template.format(word)
+    else:
+        template = random.choice(negative_templates)
+        word = random.choice(negative_words)
+        review = template.format(word)
+    return review, label
+
+dataset = []
+
+for i in range(1000):
+    if i%2==0:
+        review = generate_review("positive")
+        dataset.append(review)
+    else:
+        review = generate_review("negative")
+        dataset.append(review)
+
+# Convert to DataFrame and save
+df = pd.DataFrame(dataset, columns=["review_text", "label"])
+df["label"] = df["label"].map({"positive": 1, "negative": 0})
+
+
+# Save to CSV
+df.to_csv("movie_reviews.csv", index=False)
+print("Dataset saved as 'movie_reviews.csv'")
