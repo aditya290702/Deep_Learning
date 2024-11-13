@@ -1,0 +1,105 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import matplotlib.pyplot as plt
+
+def vanishing_grad():
+    # Set device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Define input, output sizes, and hidden layer size
+    input_size = 2  # Example input size
+    hidden_size = 5  # Hidden layer size
+    output_size = 1  # Output layer size
+
+    # Create layers manually with weight initialization
+    fc1 = nn.Linear(input_size, hidden_size).to(device)
+    nn.init.normal_(fc1.weight, mean=0.0, std=1.1)
+
+
+    fc2 = nn.Linear(hidden_size, hidden_size).to(device)
+    nn.init.normal_(fc2.weight, mean=0.0, std=2.1)
+
+
+    fc3 = nn.Linear(hidden_size, hidden_size).to(device)
+    nn.init.normal_(fc3.weight, mean=0.0, std=3.1)
+
+
+    fc4 = nn.Linear(hidden_size, hidden_size).to(device)
+    nn.init.normal_(fc4.weight, mean=0.0, std=4.1)
+
+
+    fc5 = nn.Linear(hidden_size, output_size).to(device)
+    nn.init.normal_(fc5.weight, mean=0.0, std=5.1)
+
+
+
+    X = torch.randn(1000, input_size).to(device)  # Random input data
+    y = torch.randint(0, 2, (1000, 1)).float().to(device)  # Binary target labels
+
+
+    # Loss function and optimizer
+    learning_rate = 0.15
+    criterion = nn.BCELoss()
+
+    optimizer = optim.SGD([
+        {'params': fc1.parameters()},
+        {'params': fc2.parameters()},
+        {'params': fc3.parameters()},
+        {'params': fc4.parameters()},
+        {'params': fc5.parameters()}
+    ], lr=learning_rate)
+
+    # List to store gradient values and epochs
+    grads_per_epoch = []
+    n_epochs = 100
+
+    # Training loop
+    for epoch in range(n_epochs):
+
+        # Forward pass
+        out = torch.sigmoid(fc1(X))
+        out = torch.sigmoid(fc2(out))
+        out = torch.sigmoid(fc3(out))
+        out = torch.sigmoid(fc4(out))
+        out = torch.sigmoid(fc5(out))
+
+        # Compute loss
+        loss = criterion(out, y)
+        # Backward pass
+        loss.backward()
+
+        grad_norms = []
+        for layer in [fc1, fc2, fc3, fc4, fc5]:
+            for param in layer.parameters():
+                if param.grad is not None:
+                    grad_norms.append(param.grad.norm().item())
+        grads_per_epoch.append(sum(grad_norms) / len(grad_norms))  # Average gradient norm
+
+        # Update parameters
+
+        optimizer.step()
+        optimizer.zero_grad()  # Clear gradients before the next iteration
+
+
+
+        if epoch:
+            print(f'Epoch [{epoch}/{n_epochs}], Loss: {loss.item():.4f}, Gradient: {grads_per_epoch[-1]:.4f}')
+
+    # Plot Gradient vs Epochs
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(n_epochs), grads_per_epoch, label="Gradient Norm")
+    plt.xlabel('Epochs')
+    plt.ylabel('Average Gradient Norm')
+    plt.title('Gradient Norm vs Epochs')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# def exploding_gradient():
+
+def main():
+    vanishing_grad()
+
+if __name__ == '__main__':
+    main()
