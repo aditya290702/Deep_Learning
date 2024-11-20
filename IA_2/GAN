@@ -1,1 +1,148 @@
+#Question : train a GAN using simulated sinusoidal data and a trained net to generate new samples
 
+
+import torch
+from torch import nn
+import numpy as np
+from matplotlib import pyplot as plt
+import numpy as np
+from torch import optim
+from matplotlib import pyplot as plt
+
+
+#the parameters that will be used
+input_sample_size = 1024
+input_dim = 2
+pi = 3.14
+batch_size = 64
+
+#I am generating 1024 samples between a range of 0 to 2pi
+x1 = torch.linspace(0,2*pi,1024)
+
+
+#a dataset variable that is of size 1024 adnd 2 dimensional that will store both x1 and x2
+#dataset = list(np.array(1024,ndmin = 2))
+dataset = []
+x2_list = []
+
+#for each x1 i am generating it's sim value and then mapping it to the respective x1 value
+for ele in x1:
+    #sin values for each x1
+    x2 = torch.sin(x1)
+    x2_list.append(x2)
+    #zipping x1 and x2(sin of x1) together
+    mapped = list(zip(x1,x2))
+    #appending to the dataset
+    dataset.append(mapped)
+
+
+#converting this list dataset into a numpy array
+dataset = (np.array(mapped,ndmin = 2))
+
+
+print("---------------------------------------------------")
+print(f"The elements in the dataset(x1,x2) are : {dataset}")
+print("---------------------------------------------------")
+print(f"The shape the dataset(x1,x2) are : {np.shape(dataset)}")
+print("---------------------------------------------------")
+print(f"the dimension of the dataset is : {np.ndim(dataset)}")
+print("---------------------------------------------------")
+
+
+#plotting the dataset
+plt.figure(figsize=(10,5))
+plt.plot(x1,x2)
+plt.grid()
+plt.xlabel("Values between 0 to 2pi || x1")
+plt.ylabel("The respective sin values || x2")
+plt.title("Plot of the Dataset")
+plt.show()
+
+###---------------------------------------------PART 2 ------------------------------------------------------------------
+
+# x2 = []
+# for ele in x2_list:
+#     x2.append(ele)
+
+#i am taking the the hidden network size to be 512
+hidden_size = 512
+
+#i am taking the learning rate to be 0.0002
+learning_rate = 0.0002
+
+#the architecture for generator
+generator = nn.Sequential(
+    nn.Linear(1024, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, 1)  # Output size matches the discriminator input
+)
+
+
+
+#the architecture for discriminator
+discriminator = nn.Sequential(
+    nn.Linear(1, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, hidden_size),
+    nn.ReLU(),
+    nn.Linear(hidden_size, 1),  # Fix: Output a single value
+    nn.Sigmoid()
+)
+
+
+#defining the loss functions
+loss = nn.BCELoss()
+
+#defining the optimizers
+optimizer_g = optim.Adam(generator.parameters(),lr=learning_rate)
+optimizer_d = optim.Adam(discriminator.parameters(),lr=learning_rate)
+
+random_numbers = torch.randn(1,1024)
+
+
+# #training the generator
+for epoch in range(1,10000+1):
+
+#generating real data
+    real_data = x2[:batch_size].unsqueeze(1)  # Use batch_size samples
+    real_label = torch.ones(batch_size, 1)
+
+#generating fake data and labels
+    random_numbers = torch.normal(0,1,size=(batch_size,1024))
+    fake_data = generator(random_numbers)
+    fake_label = torch.zeros(batch_size,1)
+
+
+
+#Training the generator
+    optimizer_g.zero_grad()
+    generated_data = generator(random_numbers)
+    generated_pred = discriminator(generated_data)
+    loss_g = loss(generated_pred,real_label)
+    loss_g.backward()
+    optimizer_g.step()
+
+#training the disscriminator
+    optimizer_d.zero_grad()
+    real_pred = discriminator(real_data)
+    real_loss = loss(real_pred,real_label)
+    fake_pred = discriminator(fake_data.detach())
+    fake_loss = loss(fake_pred,fake_label)
+    total_loss = real_loss + fake_loss
+    total_loss.backward()
+    optimizer_d.step()
+
+    if epoch%100 == 0 :
+        print(f"Epoch : {epoch} || Loss : {total_loss}")
+
+
+
+
+# #i wnill train the discriminator
+#
+# #i have to print the loss for epochs
+#
+# #i am clear with the the steps in which i need to move ahead but i am facing problem in datatype (
+# # (conversion : expected double,got float and tensor input) due to which i fell short of time and hence i have commented this part
